@@ -11,6 +11,7 @@ app.get("/", (req, res) => {
   res.send("WELCOME TO TASK MANAGEMENT API");
 });
 
+// DATABASE
 let tasks = [];
 let taskCounter = 1;
 
@@ -65,7 +66,14 @@ app.put("/api/tasks/:id", (req, res) => {
     return res.status(404).json({ message: "Task not found" });
   }
 
-  const { title, category, assignedTo, deadline, status, remarks } = req.body;
+  const {
+    title,
+    category,
+    assignedTo,
+    deadline,
+    status,
+    remarks
+  } = req.body;
 
   task.title = title ?? task.title;
   task.category = category ?? task.category;
@@ -92,9 +100,7 @@ app.delete("/api/tasks/:id", (req, res) => {
 
   tasks = tasks.filter(t => t.id !== id);
 
-  res.json({
-    message: "Task deleted successfully"
-  });
+  res.json({ message: "Task deleted successfully" });
 });
 
 // ADD SUBTASK
@@ -108,8 +114,11 @@ app.post("/api/tasks/:id/subtasks", (req, res) => {
   const subtask = {
     id: Date.now().toString(),
     title: req.body.title,
+    assignedTo: req.body.assignedTo || "Unassigned",
+    deadline: req.body.deadline || null,
     status: "Pending",
-    remarks: req.body.remarks || ""
+    remarks: req.body.remarks || "",
+    createdAt: new Date()
   };
 
   task.subtasks.push(subtask);
@@ -128,15 +137,25 @@ app.put("/api/tasks/:taskId/subtasks/:subId", (req, res) => {
     return res.status(404).json({ message: "Task not found" });
   }
 
-  const subtask = task.subtasks.find(s => s.id === req.params.subId);
+  const subtask = task.subtasks.find(
+    s => s.id === req.params.subId
+  );
 
   if (!subtask) {
     return res.status(404).json({ message: "Subtask not found" });
   }
 
-  const { title, status, remarks } = req.body;
+  const {
+    title,
+    assignedTo,
+    deadline,
+    status,
+    remarks
+  } = req.body;
 
   subtask.title = title ?? subtask.title;
+  subtask.assignedTo = assignedTo ?? subtask.assignedTo;
+  subtask.deadline = deadline ?? subtask.deadline;
   subtask.status = status ?? subtask.status;
   subtask.remarks = remarks ?? subtask.remarks;
 
@@ -156,18 +175,18 @@ app.delete("/api/tasks/:taskId/subtasks/:subId", (req, res) => {
 
   const before = task.subtasks.length;
 
-  task.subtasks = task.subtasks.filter(s => s.id !== req.params.subId);
+  task.subtasks = task.subtasks.filter(
+    s => s.id !== req.params.subId
+  );
 
   if (task.subtasks.length === before) {
     return res.status(404).json({ message: "Subtask not found" });
   }
 
-  res.json({
-    message: "Subtask deleted successfully"
-  });
+  res.json({ message: "Subtask deleted successfully" });
 });
 
-// UPDATE STATUS ONLY
+// UPDATE TASK STATUS ONLY
 app.patch("/api/tasks/:id/status", (req, res) => {
   const task = findTask(req.params.id);
 
@@ -183,9 +202,7 @@ app.patch("/api/tasks/:id/status", (req, res) => {
   });
 });
 
-// =========================
-// START SERVER
-// =========================
+// SERVER
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
