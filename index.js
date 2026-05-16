@@ -12,6 +12,7 @@ app.get("/", (req, res) => {
 });
 
 let tasks = [];
+let taskCounter = 1;
 
 // FIND TASK HELPER
 const findTask = (id) => tasks.find(t => t.id === id);
@@ -21,7 +22,7 @@ app.post("/api/tasks", (req, res) => {
   const { title, category, assignedTo, deadline, remarks } = req.body;
 
   const newTask = {
-    id: Date.now().toString(),
+    id: taskCounter++,
     title,
     category,
     assignedTo: assignedTo || "Unassigned",
