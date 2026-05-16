@@ -1,3 +1,176 @@
-// run `node index.js` in the terminal
+const express = require("express");
+const cors = require("cors");
 
-console.log(`Hello Node.js v${process.versions.node}!`);
+const app = express();
+
+app.use(express.json());
+app.use(cors());
+
+// ROOT ROUTE
+app.get("/", (req, res) => {
+  res.send("WELCOME TO TASK MANAGEMENT API");
+});
+
+let tasks = [];
+
+// FIND TASK HELPER
+const findTask = (id) => tasks.find(t => t.id === id);
+
+// CREATE TASK
+app.post("/api/tasks", (req, res) => {
+  const { title, category, assignedTo, deadline, remarks } = req.body;
+
+  const newTask = {
+    id: Date.now().toString(),
+    title,
+    category,
+    assignedTo: assignedTo || "Unassigned",
+    deadline: deadline || null,
+    status: "Pending",
+    remarks: remarks || "",
+    subtasks: [],
+    createdAt: new Date()
+  };
+
+  tasks.push(newTask);
+
+  res.json({
+    message: "Task created successfully",
+    task: newTask
+  });
+});
+
+// GET ALL TASKS
+app.get("/api/tasks", (req, res) => {
+  res.json(tasks);
+});
+
+// GET SINGLE TASK
+app.get("/api/tasks/:id", (req, res) => {
+  const task = findTask(req.params.id);
+
+  if (!task) {
+    return res.status(404).json({ message: "Task not found" });
+  }
+
+  res.json(task);
+});
+
+// UPDATE TASK
+app.put("/api/tasks/:id", (req, res) => {
+  const task = findTask(req.params.id);
+
+  if (!task) {
+    return res.status(404).json({ message: "Task not found" });
+  }
+
+  const { title, category, assignedTo, deadline, status, remarks } = req.body;
+
+  task.title = title ?? task.title;
+  task.category = category ?? task.category;
+  task.assignedTo = assignedTo ?? task.assignedTo;
+  task.deadline = deadline ?? task.deadline;
+  task.status = status ?? task.status;
+  task.remarks = remarks ?? task.remarks;
+
+  res.json({
+    message: "Task updated successfully",
+    task
+  });
+});
+
+// DELETE TASK
+app.delete("/api/tasks/:id", (req, res) => {
+  tasks = tasks.filter(t => t.id !== req.params.id);
+
+  res.json({
+    message: "Task deleted successfully"
+  });
+});
+
+// ADD SUBTASK
+app.post("/api/tasks/:id/subtasks", (req, res) => {
+  const task = findTask(req.params.id);
+
+  if (!task) {
+    return res.status(404).json({ message: "Task not found" });
+  }
+
+  const subtask = {
+    id: Date.now().toString(),
+    title: req.body.title,
+    status: "Pending",
+    remarks: req.body.remarks || ""
+  };
+
+  task.subtasks.push(subtask);
+
+  res.json({
+    message: "Subtask added successfully",
+    subtask
+  });
+});
+
+// UPDATE SUBTASK
+app.put("/api/tasks/:taskId/subtasks/:subId", (req, res) => {
+  const task = findTask(req.params.taskId);
+
+  if (!task) {
+    return res.status(404).json({ message: "Task not found" });
+  }
+
+  const subtask = task.subtasks.find(s => s.id === req.params.subId);
+
+  if (!subtask) {
+    return res.status(404).json({ message: "Subtask not found" });
+  }
+
+  const { title, status, remarks } = req.body;
+
+  subtask.title = title ?? subtask.title;
+  subtask.status = status ?? subtask.status;
+  subtask.remarks = remarks ?? subtask.remarks;
+
+  res.json({
+    message: "Subtask updated successfully",
+    subtask
+  });
+});
+
+// DELETE SUBTASK
+app.delete("/api/tasks/:taskId/subtasks/:subId", (req, res) => {
+  const task = findTask(req.params.taskId);
+
+  if (!task) {
+    return res.status(404).json({ message: "Task not found" });
+  }
+
+  task.subtasks = task.subtasks.filter(s => s.id !== req.params.subId);
+
+  res.json({
+    message: "Subtask deleted successfully"
+  });
+});
+
+// UPDATE STATUS ONLY
+app.patch("/api/tasks/:id/status", (req, res) => {
+  const task = findTask(req.params.id);
+
+  if (!task) {
+    return res.status(404).json({ message: "Task not found" });
+  }
+
+  task.status = req.body.status;
+
+  res.json({
+    message: "Status updated successfully",
+    task
+  });
+});
+
+// START SERVER
+const PORT = process.env.PORT || 3000;
+
+app.listen(PORT, () => {
+  console.log("Server running on port " + PORT);
+});
