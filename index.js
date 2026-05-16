@@ -6,18 +6,27 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
+// =========================
 // ROOT ROUTE
+// =========================
 app.get("/", (req, res) => {
   res.send("WELCOME TO TASK MANAGEMENT API");
 });
 
+// =========================
+// DATABASE (IN MEMORY)
+// =========================
 let tasks = [];
 let taskCounter = 1;
 
-// FIND TASK HELPER
-const findTask = (id) => tasks.find(t => t.id === id);
+// =========================
+// FIND TASK HELPER (FIXED)
+// =========================
+const findTask = (id) => tasks.find(t => t.id == Number(id));
 
+// =========================
 // CREATE TASK
+// =========================
 app.post("/api/tasks", (req, res) => {
   const { title, category, assignedTo, deadline, remarks } = req.body;
 
@@ -41,12 +50,16 @@ app.post("/api/tasks", (req, res) => {
   });
 });
 
+// =========================
 // GET ALL TASKS
+// =========================
 app.get("/api/tasks", (req, res) => {
   res.json(tasks);
 });
 
+// =========================
 // GET SINGLE TASK
+// =========================
 app.get("/api/tasks/:id", (req, res) => {
   const task = findTask(req.params.id);
 
@@ -57,7 +70,9 @@ app.get("/api/tasks/:id", (req, res) => {
   res.json(task);
 });
 
+// =========================
 // UPDATE TASK
+// =========================
 app.put("/api/tasks/:id", (req, res) => {
   const task = findTask(req.params.id);
 
@@ -80,16 +95,28 @@ app.put("/api/tasks/:id", (req, res) => {
   });
 });
 
-// DELETE TASK
+// =========================
+// DELETE TASK (FIXED)
+// =========================
 app.delete("/api/tasks/:id", (req, res) => {
-  tasks = tasks.filter(t => t.id !== req.params.id);
+  const id = Number(req.params.id);
+
+  const exists = tasks.some(t => t.id === id);
+
+  if (!exists) {
+    return res.status(404).json({ message: "Task not found" });
+  }
+
+  tasks = tasks.filter(t => t.id !== id);
 
   res.json({
     message: "Task deleted successfully"
   });
 });
 
+// =========================
 // ADD SUBTASK
+// =========================
 app.post("/api/tasks/:id/subtasks", (req, res) => {
   const task = findTask(req.params.id);
 
@@ -112,7 +139,9 @@ app.post("/api/tasks/:id/subtasks", (req, res) => {
   });
 });
 
+// =========================
 // UPDATE SUBTASK
+// =========================
 app.put("/api/tasks/:taskId/subtasks/:subId", (req, res) => {
   const task = findTask(req.params.taskId);
 
@@ -138,7 +167,9 @@ app.put("/api/tasks/:taskId/subtasks/:subId", (req, res) => {
   });
 });
 
+// =========================
 // DELETE SUBTASK
+// =========================
 app.delete("/api/tasks/:taskId/subtasks/:subId", (req, res) => {
   const task = findTask(req.params.taskId);
 
@@ -146,14 +177,22 @@ app.delete("/api/tasks/:taskId/subtasks/:subId", (req, res) => {
     return res.status(404).json({ message: "Task not found" });
   }
 
+  const before = task.subtasks.length;
+
   task.subtasks = task.subtasks.filter(s => s.id !== req.params.subId);
+
+  if (task.subtasks.length === before) {
+    return res.status(404).json({ message: "Subtask not found" });
+  }
 
   res.json({
     message: "Subtask deleted successfully"
   });
 });
 
+// =========================
 // UPDATE STATUS ONLY
+// =========================
 app.patch("/api/tasks/:id/status", (req, res) => {
   const task = findTask(req.params.id);
 
@@ -169,7 +208,9 @@ app.patch("/api/tasks/:id/status", (req, res) => {
   });
 });
 
+// =========================
 // START SERVER
+// =========================
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
