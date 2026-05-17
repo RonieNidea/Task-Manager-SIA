@@ -1,71 +1,95 @@
+require("dotenv").config();
+
 const express = require("express");
 const cors = require("cors");
+const supabase = require("./supabase");
 
 const app = express();
 
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use(cors());
+
 
 // ROOT ROUTE
 app.get("/", (req, res) => {
   res.send("WELCOME TO TASK MANAGEMENT API");
 });
 
-// DATABASE
-let tasks = [];
-let taskCounter = 1;
 
-// FIND TASK HELPER
-const findTask = (id) => tasks.find(t => t.id == Number(id));
+// GET ALL TASKS
+app.get("/api/tasks", async (req, res) => {
+
+  const { data, error } =
+    await supabase
+      .from("tasks")
+      .select("*");
+
+  if (error) {
+    return res.status(500).json(error);
+  }
+
+  res.json(data);
+});
+
+
+// GET SINGLE TASK
+app.get("/api/tasks/:id", async (req, res) => {
+  const { data, error } = await supabase
+    .from("tasks")
+    .select("*")
+    .eq("id", req.params.id)
+    .single();
+
+  if (error) {
+    return res.status(404).json({
+      message: "Task not found"
+    });
+  }
+
+  res.json(data);
+});
+
 
 // CREATE TASK
-app.post("/api/tasks", (req, res) => {
-  const { title, category, assignedTo, deadline, remarks } = req.body;
-
-  const newTask = {
-    id: taskCounter++,
+app.post("/api/tasks", async (req, res) => {
+  const {
     title,
     category,
-    assignedTo: assignedTo || "Unassigned",
-    deadline: deadline || null,
-    status: "Pending",
-    remarks: remarks || "",
-    subtasks: [],
-    createdAt: new Date()
-  };
+    assignedTo,
+    deadline,
+    remarks
+  } = req.body;
 
-  tasks.push(newTask);
+  const { data, error } = await supabase
+    .from("tasks")
+    .insert([
+      {
+        title,
+        category,
+        assignedTo: assignedTo || "Unassigned",
+        deadline: deadline || null,
+        status: "Pending",
+        remarks: remarks || "",
+        subtasks: [],
+        created_at: new Date()
+      }
+    ])
+    .select();
+
+  if (error) {
+    return res.status(500).json(error);
+  }
 
   res.json({
     message: "Task created successfully",
-    task: newTask
+    task: data[0]
   });
 });
 
-// GET ALL TASKS
-app.get("/api/tasks", (req, res) => {
-  res.json(tasks);
-});
-
-// GET SINGLE TASK
-app.get("/api/tasks/:id", (req, res) => {
-  const task = findTask(req.params.id);
-
-  if (!task) {
-    return res.status(404).json({ message: "Task not found" });
-  }
-
-  res.json(task);
-});
 
 // UPDATE TASK
-app.put("/api/tasks/:id", (req, res) => {
-  const task = findTask(req.params.id);
-
-  if (!task) {
-    return res.status(404).json({ message: "Task not found" });
-  }
-
+app.put("/api/tasks/:id", async (req, res) => {
   const {
     title,
     category,
@@ -75,43 +99,64 @@ app.put("/api/tasks/:id", (req, res) => {
     remarks
   } = req.body;
 
-  task.title = title ?? task.title;
-  task.category = category ?? task.category;
-  task.assignedTo = assignedTo ?? task.assignedTo;
-  task.deadline = deadline ?? task.deadline;
-  task.status = status ?? task.status;
-  task.remarks = remarks ?? task.remarks;
+  const { data, error } = await supabase
+    .from("tasks")
+    .update({
+      title,
+      category,
+      assignedTo,
+      deadline,
+      status,
+      remarks
+    })
+    .eq("id", req.params.id)
+    .select();
+
+  if (error) {
+    return res.status(500).json(error);
+  }
 
   res.json({
     message: "Task updated successfully",
-    task
+    task: data[0]
   });
 });
 
+
 // DELETE TASK
-app.delete("/api/tasks/:id", (req, res) => {
-  const id = Number(req.params.id);
+app.delete("/api/tasks/:id", async (req, res) => {
+  const { error } = await supabase
+    .from("tasks")
+    .delete()
+    .eq("id", req.params.id);
 
-  const exists = tasks.some(t => t.id === id);
-
-  if (!exists) {
-    return res.status(404).json({ message: "Task not found" });
+  if (error) {
+    return res.status(500).json(error);
   }
 
-  tasks = tasks.filter(t => t.id !== id);
-
-  res.json({ message: "Task deleted successfully" });
+  res.json({
+    message: "Task deleted successfully"
+  });
 });
 
-// ADD SUBTASK
-app.post("/api/tasks/:id/subtasks", (req, res) => {
-  const task = findTask(req.params.id);
 
-  if (!task) {
-    return res.status(404).json({ message: "Task not found" });
+// ADD SUBTASK
+app.post("/api/tasks/:id/subtasks", async (req, res) => {
+  const { data, error } = await supabase
+    .from("tasks")
+    .select("*")
+    .eq("id", req.params.id)
+    .single();
+
+  if (error || !data) {
+    return res.status(404).json({
+      message: "Task not found"
+    });
   }
 
-  const subtask = {
+  const subtasks = data.subtasks || [];
+
+  const newSubtask = {
     id: Date.now().toString(),
     title: req.body.title,
     assignedTo: req.body.assignedTo || "Unassigned",
@@ -121,43 +166,64 @@ app.post("/api/tasks/:id/subtasks", (req, res) => {
     createdAt: new Date()
   };
 
-  task.subtasks.push(subtask);
+  subtasks.push(newSubtask);
+
+  const { error: updateError } = await supabase
+    .from("tasks")
+    .update({ subtasks })
+    .eq("id", req.params.id);
+
+  if (updateError) {
+    return res.status(500).json(updateError);
+  }
 
   res.json({
     message: "Subtask added successfully",
-    subtask
+    subtask: newSubtask
   });
 });
 
-// UPDATE SUBTASK
-app.put("/api/tasks/:taskId/subtasks/:subId", (req, res) => {
-  const task = findTask(req.params.taskId);
 
-  if (!task) {
-    return res.status(404).json({ message: "Task not found" });
+// UPDATE SUBTASK
+app.put("/api/tasks/:taskId/subtasks/:subId", async (req, res) => {
+  const { data, error } = await supabase
+    .from("tasks")
+    .select("*")
+    .eq("id", req.params.taskId)
+    .single();
+
+  if (error || !data) {
+    return res.status(404).json({
+      message: "Task not found"
+    });
   }
 
-  const subtask = task.subtasks.find(
+  const subtasks = data.subtasks || [];
+
+  const subtask = subtasks.find(
     s => s.id === req.params.subId
   );
 
   if (!subtask) {
-    return res.status(404).json({ message: "Subtask not found" });
+    return res.status(404).json({
+      message: "Subtask not found"
+    });
   }
 
-  const {
-    title,
-    assignedTo,
-    deadline,
-    status,
-    remarks
-  } = req.body;
+  subtask.title = req.body.title ?? subtask.title;
+  subtask.assignedTo = req.body.assignedTo ?? subtask.assignedTo;
+  subtask.deadline = req.body.deadline ?? subtask.deadline;
+  subtask.status = req.body.status ?? subtask.status;
+  subtask.remarks = req.body.remarks ?? subtask.remarks;
 
-  subtask.title = title ?? subtask.title;
-  subtask.assignedTo = assignedTo ?? subtask.assignedTo;
-  subtask.deadline = deadline ?? subtask.deadline;
-  subtask.status = status ?? subtask.status;
-  subtask.remarks = remarks ?? subtask.remarks;
+  const { error: updateError } = await supabase
+    .from("tasks")
+    .update({ subtasks })
+    .eq("id", req.params.taskId);
+
+  if (updateError) {
+    return res.status(500).json(updateError);
+  }
 
   res.json({
     message: "Subtask updated successfully",
@@ -165,40 +231,61 @@ app.put("/api/tasks/:taskId/subtasks/:subId", (req, res) => {
   });
 });
 
-// DELETE SUBTASK
-app.delete("/api/tasks/:taskId/subtasks/:subId", (req, res) => {
-  const task = findTask(req.params.taskId);
 
-  if (!task) {
-    return res.status(404).json({ message: "Task not found" });
+// DELETE SUBTASK
+app.delete("/api/tasks/:taskId/subtasks/:subId", async (req, res) => {
+  const { data, error } = await supabase
+    .from("tasks")
+    .select("*")
+    .eq("id", req.params.taskId)
+    .single();
+
+  if (error || !data) {
+    return res.status(404).json({
+      message: "Task not found"
+    });
   }
 
-  const before = task.subtasks.length;
+  const subtasks = data.subtasks || [];
 
-  task.subtasks = task.subtasks.filter(
+  const updatedSubtasks = subtasks.filter(
     s => s.id !== req.params.subId
   );
 
-  if (task.subtasks.length === before) {
-    return res.status(404).json({ message: "Subtask not found" });
+  const { error: updateError } = await supabase
+    .from("tasks")
+    .update({
+      subtasks: updatedSubtasks
+    })
+    .eq("id", req.params.taskId);
+
+  if (updateError) {
+    return res.status(500).json(updateError);
   }
 
-  res.json({ message: "Subtask deleted successfully" });
+  res.json({
+    message: "Subtask deleted successfully"
+  });
 });
 
+
 // UPDATE TASK STATUS ONLY
-app.patch("/api/tasks/:id/status", (req, res) => {
-  const task = findTask(req.params.id);
+app.patch("/api/tasks/:id/status", async (req, res) => {
+  const { data, error } = await supabase
+    .from("tasks")
+    .update({
+      status: req.body.status
+    })
+    .eq("id", req.params.id)
+    .select();
 
-  if (!task) {
-    return res.status(404).json({ message: "Task not found" });
+  if (error) {
+    return res.status(500).json(error);
   }
-
-  task.status = req.body.status;
 
   res.json({
     message: "Status updated successfully",
-    task
+    task: data[0]
   });
 });
 
