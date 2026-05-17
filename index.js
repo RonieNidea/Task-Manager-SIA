@@ -163,7 +163,7 @@ app.post("/api/tasks/:id/subtasks", async (req, res) => {
     deadline: req.body.deadline || null,
     status: "Pending",
     remarks: req.body.remarks || "",
-    createdAt: new Date()
+    created_at: new Date()
   };
 
   subtasks.push(newSubtask);
