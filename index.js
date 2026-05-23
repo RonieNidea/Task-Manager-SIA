@@ -2,19 +2,41 @@ require("dotenv").config();
 
 const express = require("express");
 const cors = require("cors");
+const path = require("path");
 const supabase = require("./supabase");
 
 const app = express();
 
+
+// MIDDLEWARE
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cors());
 
 
-// ROOT ROUTE
+// SERVE STATIC FILES
+app.use(express.static(path.join(__dirname)));
+
+
+// FRONTEND ROUTES
+
+// LANDING PAGE
 app.get("/", (req, res) => {
-  res.send("WELCOME TO TASK MANAGEMENT API");
+  res.sendFile(path.join(__dirname, "landingpage.html"));
 });
+
+// DASHBOARD PAGE
+app.get("/dashboard", (req, res) => {
+  res.sendFile(path.join(__dirname, "dashboard.html"));
+});
+
+// TASK MANAGER PAGE
+app.get("/tasks", (req, res) => {
+  res.sendFile(path.join(__dirname, "index.html"));
+});
+
+
+// ================= API ROUTES =================
 
 
 // GET ALL TASKS
@@ -35,6 +57,7 @@ app.get("/api/tasks", async (req, res) => {
 
 // GET SINGLE TASK
 app.get("/api/tasks/:id", async (req, res) => {
+
   const { data, error } = await supabase
     .from("tasks")
     .select("*")
@@ -53,6 +76,7 @@ app.get("/api/tasks/:id", async (req, res) => {
 
 // CREATE TASK
 app.post("/api/tasks", async (req, res) => {
+
   const {
     title,
     category,
@@ -90,6 +114,7 @@ app.post("/api/tasks", async (req, res) => {
 
 // UPDATE TASK
 app.put("/api/tasks/:id", async (req, res) => {
+
   const {
     title,
     category,
@@ -125,6 +150,7 @@ app.put("/api/tasks/:id", async (req, res) => {
 
 // DELETE TASK
 app.delete("/api/tasks/:id", async (req, res) => {
+
   const { error } = await supabase
     .from("tasks")
     .delete()
@@ -142,6 +168,7 @@ app.delete("/api/tasks/:id", async (req, res) => {
 
 // ADD SUBTASK
 app.post("/api/tasks/:id/subtasks", async (req, res) => {
+
   const { data, error } = await supabase
     .from("tasks")
     .select("*")
@@ -186,6 +213,7 @@ app.post("/api/tasks/:id/subtasks", async (req, res) => {
 
 // UPDATE SUBTASK
 app.put("/api/tasks/:taskId/subtasks/:subId", async (req, res) => {
+
   const { data, error } = await supabase
     .from("tasks")
     .select("*")
@@ -234,6 +262,7 @@ app.put("/api/tasks/:taskId/subtasks/:subId", async (req, res) => {
 
 // DELETE SUBTASK
 app.delete("/api/tasks/:taskId/subtasks/:subId", async (req, res) => {
+
   const { data, error } = await supabase
     .from("tasks")
     .select("*")
@@ -271,6 +300,7 @@ app.delete("/api/tasks/:taskId/subtasks/:subId", async (req, res) => {
 
 // UPDATE TASK STATUS ONLY
 app.patch("/api/tasks/:id/status", async (req, res) => {
+
   const { data, error } = await supabase
     .from("tasks")
     .update({
@@ -288,6 +318,7 @@ app.patch("/api/tasks/:id/status", async (req, res) => {
     task: data[0]
   });
 });
+
 
 // SERVER
 const PORT = process.env.PORT || 3000;
