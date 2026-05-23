@@ -2,50 +2,26 @@ require("dotenv").config();
 
 const express = require("express");
 const cors = require("cors");
-const path = require("path");
 const supabase = require("./supabase");
 
 const app = express();
 
-
-// MIDDLEWARE
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cors());
 
 
-// SERVE STATIC FILES
-app.use(express.static(path.join(__dirname)));
-
-
-// FRONTEND ROUTES
-
-// LANDING PAGE
+// ROOT ROUTE
 app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "landingpage.html"));
+  res.send("WELCOME TO TASK MANAGEMENT API");
 });
-
-// DASHBOARD PAGE
-app.get("/dashboard", (req, res) => {
-  res.sendFile(path.join(__dirname, "dashboard.html"));
-});
-
-// TASK MANAGER PAGE
-app.get("/tasks", (req, res) => {
-  res.sendFile(path.join(__dirname, "index.html"));
-});
-
-
-// ================= API ROUTES =================
 
 
 // GET ALL TASKS
 app.get("/api/tasks", async (req, res) => {
-
-  const { data, error } =
-    await supabase
-      .from("tasks")
-      .select("*");
+  const { data, error } = await supabase
+    .from("tasks")
+    .select("*");
 
   if (error) {
     return res.status(500).json(error);
@@ -57,7 +33,6 @@ app.get("/api/tasks", async (req, res) => {
 
 // GET SINGLE TASK
 app.get("/api/tasks/:id", async (req, res) => {
-
   const { data, error } = await supabase
     .from("tasks")
     .select("*")
@@ -76,7 +51,6 @@ app.get("/api/tasks/:id", async (req, res) => {
 
 // CREATE TASK
 app.post("/api/tasks", async (req, res) => {
-
   const {
     title,
     category,
@@ -114,7 +88,6 @@ app.post("/api/tasks", async (req, res) => {
 
 // UPDATE TASK
 app.put("/api/tasks/:id", async (req, res) => {
-
   const {
     title,
     category,
@@ -150,7 +123,6 @@ app.put("/api/tasks/:id", async (req, res) => {
 
 // DELETE TASK
 app.delete("/api/tasks/:id", async (req, res) => {
-
   const { error } = await supabase
     .from("tasks")
     .delete()
@@ -238,11 +210,20 @@ app.put("/api/tasks/:taskId/subtasks/:subId", async (req, res) => {
     });
   }
 
-  subtask.title = req.body.title ?? subtask.title;
-  subtask.assignedTo = req.body.assignedTo ?? subtask.assignedTo;
-  subtask.deadline = req.body.deadline ?? subtask.deadline;
-  subtask.status = req.body.status ?? subtask.status;
-  subtask.remarks = req.body.remarks ?? subtask.remarks;
+  subtask.title =
+    req.body.title ?? subtask.title;
+
+  subtask.assignedTo =
+    req.body.assignedTo ?? subtask.assignedTo;
+
+  subtask.deadline =
+    req.body.deadline ?? subtask.deadline;
+
+  subtask.status =
+    req.body.status ?? subtask.status;
+
+  subtask.remarks =
+    req.body.remarks ?? subtask.remarks;
 
   const { error: updateError } = await supabase
     .from("tasks")
